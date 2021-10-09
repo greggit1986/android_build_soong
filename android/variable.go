@@ -447,8 +447,9 @@ func (v *productVariables) SetDefaultConfig() {
 		AAPTCharacteristics: stringPtr("nosdcard"),
 		AAPTPrebuiltDPI:     []string{"xhdpi", "xxhdpi"},
 
-		Malloc_not_svelte:            boolPtr(true),
-		Malloc_not_svelte_libc32:     boolPtr(true),
+		Malloc_not_svelte:        boolPtr(true),
+		Malloc_not_svelte_libc32: boolPtr(true),
+
 		Malloc_zero_contents:         boolPtr(true),
 		Malloc_pattern_fill_contents: boolPtr(false),
 		Safestack:                    boolPtr(false),
