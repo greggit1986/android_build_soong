@@ -140,6 +140,7 @@ var BannerVars = []string{
 	"PLATFORM_VERSION_CODENAME",
 	"PLATFORM_VERSION",
 	"LINEAGE_VERSION",
+	"PRODUCT_INCLUDE_TAGS",
 	"TARGET_PRODUCT",
 	"TARGET_BUILD_VARIANT",
 	"TARGET_BUILD_TYPE",
@@ -164,6 +165,8 @@ var BannerVars = []string{
 	"AUX_OS_VARIANT_LIST",
 	"PRODUCT_SOONG_NAMESPACES",
 	"SOONG_SDK_SNAPSHOT_PREFER",
+	"SOONG_SDK_SNAPSHOT_TARGET_BUILD_RELEASE",
+	"SOONG_SDK_SNAPSHOT_USE_SOURCE_CONFIG_VAR",
 	"SOONG_SDK_SNAPSHOT_VERSION",
         "PRODUCT_IS_ATV",
         "PRODUCT_IS_AUTO",
@@ -210,6 +213,9 @@ func runMakeProductConfig(ctx Context, config Config) {
 		"CCACHE_SLOPPINESS",
 		"CCACHE_BASEDIR",
 		"CCACHE_CPP2",
+
+		// LLVM compiler wrapper options
+		"TOOLCHAIN_RUSAGE_OUTPUT",
 	}
 
 	allVars := append(append([]string{
@@ -231,6 +237,10 @@ func runMakeProductConfig(ctx Context, config Config) {
 
 		// Extra environment variables to be exported to ninja
 		"BUILD_BROKEN_NINJA_USES_ENV_VARS",
+
+		// Used to restrict write access to source tree
+		"BUILD_BROKEN_SRC_DIR_IS_WRITABLE",
+		"BUILD_BROKEN_SRC_DIR_RW_ALLOWLIST",
 
 		// Not used, but useful to be in the soong.log
 		"BOARD_VNDK_VERSION",
@@ -287,8 +297,11 @@ func runMakeProductConfig(ctx Context, config Config) {
 	config.SetNinjaArgs(strings.Fields(makeVars["NINJA_GOALS"]))
 	config.SetTargetDevice(makeVars["TARGET_DEVICE"])
 	config.SetTargetDeviceDir(makeVars["TARGET_DEVICE_DIR"])
+	config.sandboxConfig.SetSrcDirIsRO(makeVars["BUILD_BROKEN_SRC_DIR_IS_WRITABLE"] == "false")
+	config.sandboxConfig.SetSrcDirRWAllowlist(strings.Fields(makeVars["BUILD_BROKEN_SRC_DIR_RW_ALLOWLIST"]))
 
 	config.SetBuildBrokenDupRules(makeVars["BUILD_BROKEN_DUP_RULES"] == "true")
 	config.SetBuildBrokenUsesNetwork(makeVars["BUILD_BROKEN_USES_NETWORK"] == "true")
 	config.SetBuildBrokenNinjaUsesEnvVars(strings.Fields(makeVars["BUILD_BROKEN_NINJA_USES_ENV_VARS"]))
+	config.SetIncludeTags(strings.Fields(makeVars["PRODUCT_INCLUDE_TAGS"]))
 }

@@ -69,6 +69,11 @@ javax\.xml\.transform\.sax
 javax\.xml\.transform\.stream
 javax\.xml\.validation
 javax\.xml\.xpath
+jdk\.internal
+jdk\.internal\.math
+jdk\.internal\.misc
+jdk\.internal\.ref
+jdk\.internal\.reflect
 jdk\.internal\.util
 jdk\.internal\.vm\.annotation
 jdk\.net
@@ -246,6 +251,10 @@ com\.google\.i18n\.phonenumbers
 # Packages used for Android in Chrome OS
 org\.chromium\.arc
 org\.chromium\.arc\..*
+
+# Lineage adds
+lineageos\.platform
+org\.lineageos\.platform\.internal
 
 # NV adds
 com\.nvidia

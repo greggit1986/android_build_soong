@@ -23,6 +23,8 @@ import (
 	"android/soong/android"
 	"android/soong/java/config"
 	"android/soong/tradefed"
+
+	"github.com/google/blueprint/proptools"
 )
 
 func init() {
@@ -63,6 +65,10 @@ type robolectricProperties struct {
 	// The version number of a robolectric prebuilt to use from prebuilts/misc/common/robolectric
 	// instead of the one built from source in external/robolectric-shadows.
 	Robolectric_prebuilt_version *string
+
+	// Use /external/robolectric rather than /external/robolectric-shadows as the version of robolectri
+	// to use.  /external/robolectric closely tracks github's master, and will fully replace /external/robolectric-shadows
+	Upstream *bool
 }
 
 type robolectricTest struct {
@@ -83,6 +89,9 @@ type robolectricTest struct {
 
 	testConfig android.Path
 	data       android.Paths
+
+	forceOSType   android.OsType
+	forceArchType android.ArchType
 }
 
 func (r *robolectricTest) TestSuites() []string {
@@ -103,7 +112,11 @@ func (r *robolectricTest) DepsMutator(ctx android.BottomUpMutatorContext) {
 	if v := String(r.robolectricProperties.Robolectric_prebuilt_version); v != "" {
 		ctx.AddVariationDependencies(nil, libTag, fmt.Sprintf(robolectricPrebuiltLibPattern, v))
 	} else {
-		ctx.AddVariationDependencies(nil, libTag, robolectricCurrentLib)
+		if proptools.Bool(r.robolectricProperties.Upstream) {
+			ctx.AddVariationDependencies(nil, libTag, robolectricCurrentLib+"_upstream")
+		} else {
+			ctx.AddVariationDependencies(nil, libTag, robolectricCurrentLib)
+		}
 	}
 
 	ctx.AddVariationDependencies(nil, libTag, robolectricDefaultLibs...)
@@ -115,6 +128,9 @@ func (r *robolectricTest) DepsMutator(ctx android.BottomUpMutatorContext) {
 }
 
 func (r *robolectricTest) GenerateAndroidBuildActions(ctx android.ModuleContext) {
+	r.forceOSType = ctx.Config().BuildOS
+	r.forceArchType = ctx.Config().BuildArch
+
 	r.testConfig = tradefed.AutoGenRobolectricTestConfig(ctx, r.testProperties.Test_config,
 		r.testProperties.Test_config_template, r.testProperties.Test_suites,
 		r.testProperties.Auto_gen_config)
@@ -179,7 +195,7 @@ func (r *robolectricTest) GenerateAndroidBuildActions(ctx android.ModuleContext)
 			continue
 		} else if strings.HasSuffix(s, "/BaseRobolectricTest.java") {
 			continue
-		} else if strings.HasPrefix(s, "src/") {
+		} else {
 			s = strings.TrimPrefix(s, "src/")
 		}
 		r.tests = append(r.tests, s)
@@ -206,7 +222,7 @@ func (r *robolectricTest) GenerateAndroidBuildActions(ctx android.ModuleContext)
 		installDeps = append(installDeps, installedData)
 	}
 
-	ctx.InstallFile(installPath, ctx.ModuleName()+".jar", r.combinedJar, installDeps...)
+	r.installFile = ctx.InstallFile(installPath, ctx.ModuleName()+".jar", r.combinedJar, installDeps...)
 }
 
 func generateRoboTestConfig(ctx android.ModuleContext, outputFile android.WritablePath,
@@ -270,6 +286,10 @@ func (r *robolectricTest) generateRoboSrcJar(ctx android.ModuleContext, outputFi
 func (r *robolectricTest) AndroidMkEntries() []android.AndroidMkEntries {
 	entriesList := r.Library.AndroidMkEntries()
 	entries := &entriesList[0]
+	entries.ExtraEntries = append(entries.ExtraEntries,
+		func(ctx android.AndroidMkExtraEntriesContext, entries *android.AndroidMkEntries) {
+			entries.SetBool("LOCAL_UNINSTALLABLE_MODULE", true)
+		})
 
 	entries.ExtraFooters = []android.AndroidMkExtraFootersFunc{
 		func(w io.Writer, name, prefix, moduleDir string) {
@@ -342,10 +362,9 @@ func RobolectricTestFactory() android.Module {
 	return module
 }
 
-func (r *robolectricTest) InstallBypassMake() bool  { return true }
 func (r *robolectricTest) InstallInTestcases() bool { return true }
 func (r *robolectricTest) InstallForceOS() (*android.OsType, *android.ArchType) {
-	return &android.BuildOs, &android.BuildArch
+	return &r.forceOSType, &r.forceArchType
 }
 
 func robolectricRuntimesFactory() android.Module {
@@ -366,6 +385,9 @@ type robolectricRuntimes struct {
 	props robolectricRuntimesProperties
 
 	runtimes []android.InstallPath
+
+	forceOSType   android.OsType
+	forceArchType android.ArchType
 }
 
 func (r *robolectricRuntimes) TestSuites() []string {
@@ -384,6 +406,9 @@ func (r *robolectricRuntimes) GenerateAndroidBuildActions(ctx android.ModuleCont
 	if ctx.Target().Os != ctx.Config().BuildOSCommonTarget.Os {
 		return
 	}
+
+	r.forceOSType = ctx.Config().BuildOS
+	r.forceArchType = ctx.Config().BuildArch
 
 	files := android.PathsForModuleSrc(ctx, r.props.Jars)
 
@@ -405,15 +430,16 @@ func (r *robolectricRuntimes) GenerateAndroidBuildActions(ctx android.ModuleCont
 		}
 		runtimeFromSourceJar := android.OutputFileForModule(ctx, runtimeFromSourceModule, "")
 
-		runtimeName := fmt.Sprintf("android-all-%s-robolectric-r0.jar",
-			    ctx.Config().PlatformSdkCodename())
+		// "TREE" name is essential here because it hooks into the "TREE" name in
+		// Robolectric's SdkConfig.java that will always correspond to the NEWEST_SDK
+		// in Robolectric configs.
+		runtimeName := "android-all-current-robolectric-r0.jar"
 		installedRuntime := ctx.InstallFile(androidAllDir, runtimeName, runtimeFromSourceJar)
 		r.runtimes = append(r.runtimes, installedRuntime)
 	}
 }
 
-func (r *robolectricRuntimes) InstallBypassMake() bool  { return true }
 func (r *robolectricRuntimes) InstallInTestcases() bool { return true }
 func (r *robolectricRuntimes) InstallForceOS() (*android.OsType, *android.ArchType) {
-	return &android.BuildOs, &android.BuildArch
+	return &r.forceOSType, &r.forceArchType
 }
