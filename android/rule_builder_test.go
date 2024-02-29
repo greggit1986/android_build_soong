@@ -678,32 +678,39 @@ func TestRuleBuilder_Build(t *testing.T) {
 	})
 	t.Run("sbox", func(t *testing.T) {
 		outDir := "out/soong/.intermediates/foo_sbox"
-		sboxOutDir := filepath.Join(outDir, "gen")
-		outFile := filepath.Join(sboxOutDir, "foo_sbox")
-		depFile := filepath.Join(sboxOutDir, "foo_sbox.d")
+		outFile := filepath.Join(outDir, "gen/foo_sbox")
+		depFile := filepath.Join(outDir, "gen/foo_sbox.d")
 		rspFile := filepath.Join(outDir, "rsp")
 		rspFile2 := filepath.Join(outDir, "rsp2")
 		manifest := filepath.Join(outDir, "sbox.textproto")
 		sbox := filepath.Join("out", "soong", "host", result.Config.PrebuiltOS(), "bin/sbox")
 		sandboxPath := shared.TempDirForOutDir("out/soong")
 
-		cmd := sbox + ` --sandbox-path ` + sandboxPath + ` --output-dir ` + sboxOutDir + ` --manifest ` + manifest
+//jjedit		cmd := `rm -rf ` + outDir + `/gen && ` +
+//jjedit			sbox + ` --sandbox-path ` + sandboxPath + ` --manifest ` + manifest
+//jjeditstart
+		cmd := sbox + ` --sandbox-path ` + sandboxPath + ` --manifest ` + manifest
+//jjeditend
+
 		module := result.ModuleForTests("foo_sbox", "")
 		check(t, module.Output("gen/foo_sbox"), module.Output(rspFile2),
 			cmd, outFile, depFile, rspFile, rspFile2, false, []string{manifest}, []string{sbox})
 	})
 	t.Run("sbox_inputs", func(t *testing.T) {
 		outDir := "out/soong/.intermediates/foo_sbox_inputs"
-		sboxOutDir := filepath.Join(outDir, "gen")
-		outFile := filepath.Join(sboxOutDir, "foo_sbox_inputs")
-		depFile := filepath.Join(sboxOutDir, "foo_sbox_inputs.d")
+		outFile := filepath.Join(outDir, "gen/foo_sbox_inputs")
+		depFile := filepath.Join(outDir, "gen/foo_sbox_inputs.d")
 		rspFile := filepath.Join(outDir, "rsp")
 		rspFile2 := filepath.Join(outDir, "rsp2")
 		manifest := filepath.Join(outDir, "sbox.textproto")
 		sbox := filepath.Join("out", "soong", "host", result.Config.PrebuiltOS(), "bin/sbox")
 		sandboxPath := shared.TempDirForOutDir("out/soong")
 
-		cmd := sbox + ` --sandbox-path ` + sandboxPath + ` --output-dir ` + sboxOutDir + ` --manifest ` + manifest
+//jjedit		cmd := `rm -rf ` + outDir + `/gen && ` +
+//jjedit			sbox + ` --sandbox-path ` + sandboxPath + ` --manifest ` + manifest
+//jjeditstart
+		cmd := sbox + ` --sandbox-path ` + sandboxPath + ` --manifest ` + manifest
+//jjeditend
 
 		module := result.ModuleForTests("foo_sbox_inputs", "")
 		check(t, module.Output("gen/foo_sbox_inputs"), module.Output(rspFile2),

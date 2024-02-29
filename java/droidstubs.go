@@ -433,10 +433,6 @@ func (d *Droidstubs) apiLevelsAnnotationsFlags(ctx android.ModuleContext, cmd *a
 	}
 }
 
-func metalavaUseRbe(ctx android.ModuleContext) bool {
-	return ctx.Config().UseRBE() && ctx.Config().IsEnvTrue("RBE_METALAVA")
-}
-
 func metalavaCmd(ctx android.ModuleContext, rule *android.RuleBuilder, javaVersion javaVersion, srcs android.Paths,
 	srcJarList android.Path, bootclasspath, classpath classpath, homeDir android.WritablePath) *android.RuleBuilderCommand {
 	rule.Command().Text("rm -rf").Flag(homeDir.String())
@@ -445,7 +441,7 @@ func metalavaCmd(ctx android.ModuleContext, rule *android.RuleBuilder, javaVersi
 	cmd := rule.Command()
 	cmd.FlagWithArg("ANDROID_PREFS_ROOT=", homeDir.String())
 
-	if metalavaUseRbe(ctx) {
+	if ctx.Config().UseRBE() && ctx.Config().IsEnvTrue("RBE_METALAVA") {
 		rule.Remoteable(android.RemoteRuleSupports{RBE: true})
 		execStrategy := ctx.Config().GetenvWithDefault("RBE_METALAVA_EXEC_STRATEGY", remoteexec.LocalExecStrategy)
 		labels := map[string]string{"type": "tool", "name": "metalava"}
@@ -669,9 +665,7 @@ func (d *Droidstubs) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 	}
 
 	// TODO(b/183630617): rewrapper doesn't support restat rules
-	if !metalavaUseRbe(ctx) {
-		rule.Restat()
-	}
+	// rule.Restat()
 
 	zipSyncCleanupCmd(rule, srcJarDir)
 
